@@ -119,7 +119,7 @@ class BaseFix(object):
                 try:
                     if False in [isinstance(a, SubFactory) for a in attr]:
                         raise AttributeError('References in fixtures must be declared with "SubFactory": ' + rel.key)
-                except TypeError as e:
+                except TypeError, e:
                     # ok, attr is not iterable, maybe its directly a SubFactory
                     if not isinstance(attr, SubFactory):
                         raise AttributeError('References in fixtures must be declared with "SubFactory": ' + rel.key)

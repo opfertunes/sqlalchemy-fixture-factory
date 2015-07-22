@@ -7,7 +7,7 @@ A fixture factory for SQLAlchemy to easily build test scenarios for unit or inte
 Build test scenarios organically and instantiate them with one line including all dependencies.
 """
 
-from __future__ import absolute_import, 
+from __future__ import absolute_import 
 import sys
 
 import os
@@ -20,8 +20,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 def get_version():
     filename = os.path.join(HERE, 'sqlalchemy_fixture_factory', '__init__.py')
-    with open(filename) as f:
-        contents = f.read()
+    f = open(filename)
+    contents = f.read()
     pattern = r"^__version__ = '(.*?)'$"
     return re.search(pattern, contents, re.MULTILINE).group(1)
 
@@ -43,7 +43,7 @@ setup(
     include_package_data=True,
     platforms='any',
     install_requires=[
-        'SQLAlchemy>=0.7',
+        #'SQLAlchemy>=0.7',
     ],
     setup_requires=[] + pytest_runner,
     test_suite='tests',
