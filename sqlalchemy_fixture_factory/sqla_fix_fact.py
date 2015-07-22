@@ -5,8 +5,8 @@
 """
 Fixture Factory for SQLAlchemy
 """
-from sqlalchemy import inspect
-from sqlalchemy.ext import hybrid
+#from sqlalchemy import inspect
+#from sqlalchemy.ext import hybrid
 from sqlalchemy.orm import class_mapper
 
 METHOD_MODEL = 'model'
@@ -92,7 +92,7 @@ class SubFactory():
         self.kwargs = kwargs
 
 
-class BaseFix():
+class BaseFix(object):
     """
     Base class for each fixture
     """
@@ -158,7 +158,7 @@ class BaseFix():
         """
 
         model = self.model()
-        self._fix_fact.get_db_session().add(model)
+        self._fix_fact.get_db_session().save_or_update(model) #.add()
         self._fix_fact.get_db_session().flush()
         self._fix_fact.get_db_session().expunge(model)
 
@@ -182,13 +182,14 @@ class BaseFix():
                 return self._kwargs[key]
             else:
                 return getattr(self, key, None)
-
-        attrs = dict([(a.key, getAttr(a.key)) for a in self.MODEL._sa_class_manager.mapper.attrs if (getAttr(a.key) is not None)])
-
+ 
+        #attrs = dict([(a.key, getAttr(a.key)) for a in self.MODEL._sa_class_manager.mapper.attrs if (getAttr(a.key) is not None)])
+        attrs = dict([(a.key, getAttr(a.key)) for a in class_mapper(self.MODEL).iterate_properties if (getAttr(a.key) is not None)])
+        print "attrs(1) %s" % attrs
         # add hybrids
-        for a in inspect(self.MODEL).all_orm_descriptors.keys():
-            if (getAttr(a) is not None) and a != '__mapper__':
-                attrs[a] = getAttr(a)
+        #for a in inspect(self.MODEL).all_orm_descriptors.keys():
+        #    if (getAttr(a) is not None) and a != '__mapper__':
+        #        attrs[a] = getAttr(a)
 
         def resolveSubFactory(attr):
             if isinstance(attr, SubFactory):
@@ -201,8 +202,8 @@ class BaseFix():
 
             return None
 
-        for rel in self.MODEL._sa_class_manager.mapper.relationships:
-            attr = attrs.get(rel.key, None)
+        for propname, rel in class_mapper(self.MODEL).properties.iteritems(): #self.MODEL._sa_class_manager.mapper.relationships:
+            attr = attrs.get(propname, None) #rel.key
 
 
             try:
@@ -213,31 +214,31 @@ class BaseFix():
                         converted.append(a)
 #                converted = [a for resolveSubFactory(a) in attr if a]
 
-            except TypeError as e:
+            except TypeError, e:
                 # seems not be a list, try it as an attribute
                 converted = resolveSubFactory(attr)
 
             if converted:
-                attrs[rel.key] = converted
+                attrs[propname] = converted   #rel.key
 
         # also add hybrid properties
-        for hyb in inspect(self.MODEL).all_orm_descriptors.keys():
-            if inspect(self.MODEL).all_orm_descriptors[hyb].extension_type is hybrid.HYBRID_PROPERTY:
-                attr = attrs.get(hyb, None)
-
-                try:
-                    converted = []
-                    for a in attr:
-                        a = resolveSubFactory(a)
-                        if a:
-                            converted.append(a)
-                        #                converted = [a for resolveSubFactory(a) in attr if a]
-
-                except TypeError as e:
-                    # seems not be a list, try it as an attribute
-                    converted = resolveSubFactory(attr)
-
-                if converted:
-                    attrs[hyb] = converted
+        #for hyb in inspect(self.MODEL).all_orm_descriptors.keys():
+        #    if inspect(self.MODEL).all_orm_descriptors[hyb].extension_type is hybrid.HYBRID_PROPERTY:
+        #        attr = attrs.get(hyb, None)
+        #
+        #        try:
+        #            converted = []
+        #            for a in attr:
+        #                a = resolveSubFactory(a)
+        #                if a:
+        #                    converted.append(a)
+        #                #                converted = [a for resolveSubFactory(a) in attr if a]
+        #
+        #        except TypeError, e:
+        #            # seems not be a list, try it as an attribute
+        #            converted = resolveSubFactory(attr)
+        #
+        #        if converted:
+        #            attrs[hyb] = converted
 
         return attrs

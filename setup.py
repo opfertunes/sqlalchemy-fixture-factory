@@ -7,7 +7,7 @@ A fixture factory for SQLAlchemy to easily build test scenarios for unit or inte
 Build test scenarios organically and instantiate them with one line including all dependencies.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals, division
+from __future__ import absolute_import, 
 import sys
 
 import os

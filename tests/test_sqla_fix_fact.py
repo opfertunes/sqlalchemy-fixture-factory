@@ -4,7 +4,7 @@
 Tests for the fixture
 """
 
-from __future__ import absolute_import, print_function, unicode_literals, division
+from __future__ import absolute_import
 from sqlalchemy_fixture_factory import sqla_fix_fact
 from sqlalchemy_fixture_factory.sqla_fix_fact import BaseFix
 
