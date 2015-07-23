@@ -111,18 +111,19 @@ class BaseFix(object):
 
         self._fix_fact = fix_fact
         self._kwargs = kwargs
-
-        for rel in self.MODEL._sa_class_manager.mapper.relationships:
-            attr = getattr(self, rel.key, None)
+        
+        for propname, rel in class_mapper(self.MODEL).properties.iteritems():
+        #for rel in self.MODEL._sa_class_manager.mapper.relationships:
+            attr = getattr(self, propname, None)
             if attr:
                 list_type_error = False
                 try:
                     if False in [isinstance(a, SubFactory) for a in attr]:
-                        raise AttributeError('References in fixtures must be declared with "SubFactory": ' + rel.key)
+                        raise AttributeError('References in fixtures must be declared with "SubFactory": ' + propname)
                 except TypeError, e:
                     # ok, attr is not iterable, maybe its directly a SubFactory
                     if not isinstance(attr, SubFactory):
-                        raise AttributeError('References in fixtures must be declared with "SubFactory": ' + rel.key)
+                        raise AttributeError('References in fixtures must be declared with "SubFactory": ' + propname)
 
     def model(self):
         """
@@ -142,11 +143,11 @@ class BaseFix(object):
         # [a.key for a in Group._sa_class_manager.mapper.relationships]
 
         attributes = self.getAttributes()
-        if hasattr(self.MODEL(), 'update'):
-            model = self.MODEL()
-            model.update(**attributes)
-        else:
-            model = self.MODEL(**attributes)
+        #if hasattr(self.MODEL(), 'update'):
+        #    model = self.MODEL()
+        #    model.update(**attributes)
+        #else:
+        model = self.MODEL(**attributes)
         return model
 
     def create(self):
