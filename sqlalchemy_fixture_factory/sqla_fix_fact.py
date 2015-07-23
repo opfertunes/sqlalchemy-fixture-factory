@@ -8,6 +8,7 @@ Fixture Factory for SQLAlchemy
 #from sqlalchemy import inspect
 #from sqlalchemy.ext import hybrid
 from sqlalchemy.orm import class_mapper
+from pprint import pprint
 
 METHOD_MODEL = 'model'
 METHOD_CREATE = 'create'
@@ -30,14 +31,22 @@ class SqlaFixFact():
 
     def merge(self, instance, Fixture, kwargs):
         assert self.db_session, 'DB session not initialized yet'
+        
+        #try:
+        #    self.db_session.expunge(instance)
+        #except:
+        #    pass
+                
         inst = self.db_session.merge(instance)
+        
         self.db_session.flush()
 
         self.instances[(Fixture.__name__, str(kwargs))] = inst
-
+    
         return inst
 
     def get(self, Fixture, **kwargs):
+        
         inst = self.instances.get((Fixture.__name__, str(kwargs)))
 
         if not inst:
@@ -143,11 +152,13 @@ class BaseFix(object):
         # [a.key for a in Group._sa_class_manager.mapper.relationships]
 
         attributes = self.getAttributes()
+        attributes["_sa_session"] = None  #so mapper doesn't add this instance to the session!
         #if hasattr(self.MODEL(), 'update'):
         #    model = self.MODEL()
         #    model.update(**attributes)
         #else:
         model = self.MODEL(**attributes)
+
         return model
 
     def create(self):
@@ -159,7 +170,7 @@ class BaseFix(object):
         """
 
         model = self.model()
-        self._fix_fact.get_db_session().save_or_update(model) #.add()
+        self._fix_fact.get_db_session().save(model) #.add()
         self._fix_fact.get_db_session().flush()
         self._fix_fact.get_db_session().expunge(model)
 
@@ -186,7 +197,7 @@ class BaseFix(object):
  
         #attrs = dict([(a.key, getAttr(a.key)) for a in self.MODEL._sa_class_manager.mapper.attrs if (getAttr(a.key) is not None)])
         attrs = dict([(a.key, getAttr(a.key)) for a in class_mapper(self.MODEL).iterate_properties if (getAttr(a.key) is not None)])
-        print "attrs(1) %s" % attrs
+        #print "attrs(1) %s" % attrs
         # add hybrids
         #for a in inspect(self.MODEL).all_orm_descriptors.keys():
         #    if (getAttr(a) is not None) and a != '__mapper__':
