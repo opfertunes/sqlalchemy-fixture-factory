@@ -32,10 +32,10 @@ class SqlaFixFact():
     def merge(self, instance, Fixture, kwargs):
         assert self.db_session, 'DB session not initialized yet'
         
-        #try:
-        #    self.db_session.expunge(instance)
-        #except:
-        #    pass
+        try:
+            self.db_session.expunge(instance)
+        except:
+            pass
                 
         inst = self.db_session.merge(instance)
         
@@ -205,30 +205,39 @@ class BaseFix(object):
 
         def resolveSubFactory(attr):
             if isinstance(attr, SubFactory):
+                #print "call %s on SubFactory: %s " % (attr.method, attr)
                 if attr.method == METHOD_GET:
                     return attr.fixture(self._fix_fact, **attr.kwargs).get()
                 elif attr.method == METHOD_CREATE:
                     return attr.fixture(self._fix_fact, **attr.kwargs).create()
                 elif attr.method == METHOD_MODEL:
                     return attr.fixture(self._fix_fact, **attr.kwargs).model()
-
+            #else:
+            #    print "attr is no SubFactory: %s" % attr
             return None
+           
+        #need to iterate all properties as SQ 0.3 is not returning backref properties from class_mapper(self.MODEL).properties.iteritems()   
+        for propname, rel in attrs.iteritems(): 
+            
+            #print "propname: %s  rel: %s" % (propname, rel)
 
-        for propname, rel in class_mapper(self.MODEL).properties.iteritems(): #self.MODEL._sa_class_manager.mapper.relationships:
-            attr = attrs.get(propname, None) #rel.key
-
+            attr = attrs.get(propname, None) 
+            if isinstance(attr, basestring):
+                continue
 
             try:
                 converted = []
                 for a in attr:
+                    #print "list like: %s" % a
                     a = resolveSubFactory(a)
                     if a:
                         converted.append(a)
-#                converted = [a for resolveSubFactory(a) in attr if a]
 
             except TypeError, e:
                 # seems not be a list, try it as an attribute
+                #print "%s seems not be a list, try it as an attribute" % attr
                 converted = resolveSubFactory(attr)
+                #print "%s converted = %s" % (attr, converted)
 
             if converted:
                 attrs[propname] = converted   #rel.key
