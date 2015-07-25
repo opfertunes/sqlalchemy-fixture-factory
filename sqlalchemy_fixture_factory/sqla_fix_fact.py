@@ -152,6 +152,8 @@ class BaseFix(object):
         # [a.key for a in Group._sa_class_manager.mapper.relationships]
 
         attributes = self.getAttributes()
+        #print "attributes (after) %s => %s" % (self.MODEL, attributes)
+        
         attributes["_sa_session"] = None  #so mapper doesn't add this instance to the session!
         #if hasattr(self.MODEL(), 'update'):
         #    model = self.MODEL()
@@ -175,9 +177,24 @@ class BaseFix(object):
         self._fix_fact.get_db_session().expunge(model)
 
         # in order to have the right values for all fields updated directly by the DB, we have to load the model again
-        id_attr = class_mapper(self.MODEL).primary_key[0].name
-        id = getattr(model, id_attr)
-        return self._fix_fact.get_db_session().query(self.MODEL).get(id)
+        
+        #print "pk for model %s is %s  (%s)" % (self.MODEL, class_mapper(self.MODEL).primary_key, class_mapper(self.MODEL).primary_key.__class__.__name__)
+        pk = class_mapper(self.MODEL).primary_key
+        if len(pk) == 1:
+            pk0 = class_mapper(self.MODEL).primary_key[0]
+            id_attr = pk0.key or pk0.name
+            id = getattr(model, id_attr)
+            return self._fix_fact.get_db_session().query(self.MODEL).get(id)
+        else:
+            pkFilter = []
+            for eachPk in pk:
+                id_attr = eachPk.key or eachPk.name
+                #print "%s pk attr %s => %s" % (self.MODEL, id_attr, getattr(model, id_attr)) 
+                pkFilter.append(getattr(model, id_attr))
+                
+            result = self._fix_fact.get_db_session().query(self.MODEL).get(pkFilter)     
+            #print "seek %s with pk %s => %s" % (self.MODEL, pkFilter, result)
+            return result                   
 
     def get(self):
         """
@@ -197,7 +214,7 @@ class BaseFix(object):
  
         #attrs = dict([(a.key, getAttr(a.key)) for a in self.MODEL._sa_class_manager.mapper.attrs if (getAttr(a.key) is not None)])
         attrs = dict([(a.key, getAttr(a.key)) for a in class_mapper(self.MODEL).iterate_properties if (getAttr(a.key) is not None)])
-        #print "attrs(1) %s" % attrs
+        #print "%s => attrs(1) %s" % (self.MODEL, attrs)
         # add hybrids
         #for a in inspect(self.MODEL).all_orm_descriptors.keys():
         #    if (getAttr(a) is not None) and a != '__mapper__':
