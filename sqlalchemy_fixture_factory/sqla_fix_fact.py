@@ -30,8 +30,6 @@ class SqlaFixFact():
         return self.db_session
 
     def merge(self, instance, Fixture, kwargs):
-        assert self.db_session, 'DB session not initialized yet'
-        
         try:
             self.db_session.expunge(instance)
         except:
@@ -46,13 +44,20 @@ class SqlaFixFact():
         return inst
 
     def get(self, Fixture, **kwargs):
-        
         inst = self.instances.get((Fixture.__name__, str(kwargs)))
 
         if not inst:
+            #print "get(): %s create new instance of %s" % (self, Fixture)
+            
+            #only merge with session if a new instance:
             inst = Fixture(self, **kwargs).model()
-
-        return self.merge(inst, Fixture, kwargs)
+            return self.merge(inst, Fixture, kwargs)
+        else:
+            #print "get(): %s found existing instance of %s" % (self, Fixture)
+            #by definition this instance has already been merged into our session,
+            # no need to merge it again (this can cause duplicate insertions
+            # with nested relationships calling get())
+            return inst
 
 ####
 # sub factory things
@@ -152,7 +157,7 @@ class BaseFix(object):
         # [a.key for a in Group._sa_class_manager.mapper.relationships]
 
         attributes = self.getAttributes()
-        #print "attributes (after) %s => %s" % (self.MODEL, attributes)
+        #print "model(%s) create instance with => %s" % (self.MODEL, attributes)
         
         attributes["_sa_session"] = None  #so mapper doesn't add this instance to the session!
         #if hasattr(self.MODEL(), 'update'):
@@ -203,7 +208,14 @@ class BaseFix(object):
 
         :return: SQLAlchemy Model instance
         """
-        return self._fix_fact.get(self.__class__, **self._kwargs)
+        
+        result = self._fix_fact.get(self.__class__, **self._kwargs)
+        
+        # since we are calling get() from a test (as opposed to a SubFactory),
+        # we can safely refresh this instance to make sure SA loads up all the relationships correctly:
+        self._fix_fact.db_session.refresh(result)
+        
+        return result
 
     def getAttributes(self):
         def getAttr(key):
